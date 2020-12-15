@@ -1,0 +1,13 @@
+{
+  "collectionName": "components_commons_paragraphs",
+  "info": {
+    "name": "Paragraph",
+    "icon": "paragraph"
+  },
+  "options": {},
+  "attributes": {
+    "content": {
+      "type": "richtext"
+    }
+  }
+}
