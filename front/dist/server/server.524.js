@@ -1,0 +1,1 @@
+exports.id=524,exports.ids=[524],exports.modules={4524:(s,o,t)=>{"use strict";t.r(o),t.d(o,{default:()=>e});const e=(0,t(1379).us)(((s,o,t,e)=>"<p>coucou</p>"))}};
