@@ -1,22 +1,19 @@
 <script>
-  import { onMount } from "svelte";
+  import { onMount, setContext } from "svelte";
+  import { writable } from "svelte/store";
   import Admin from "@/components/Admin/Admin.svelte";
-  import Blocks from "@/components/Blocks/Blocks.svelte";
 
   export let structure = {};
+  export let layout = null;
+  export let template = null;
+  export let blocks = [];
 
-  let page = null;
-
-  onMount(async () => {
-    const allPages = await fetch("http://localhost:1337/pages")
-      .then(res => res.json())
-      .catch(console.error);
-    page = allPages && allPages[0];
-  });
+  const _blocks = writable(blocks);
+  setContext("blocks", _blocks);
 </script>
 
 <svelte:component this={Admin}>
-  {#if structure && structure.content}
-    <Blocks blocks={structure.content} />
-  {/if}
+  <svelte:component this={layout}>
+    <svelte:component this={template} {structure} />
+  </svelte:component>
 </svelte:component>

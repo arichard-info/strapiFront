@@ -1,7 +1,7 @@
 <script>
   export let component = null;
   export let type = "";
-  export let props = {};
+  export let data = {};
 
   let renderComponent = component;
   let adminComponent = null;
@@ -22,6 +22,6 @@
 
 <div on:click={toggleAdmin}>
   {#if component}
-    <svelte:component this={renderComponent} {...props} />
+    <svelte:component this={renderComponent} {...data} />
   {/if}
 </div>

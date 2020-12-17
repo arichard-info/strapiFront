@@ -1,4 +1,5 @@
 const path = require("path");
+const NodemonPlugin = require("nodemon-webpack-plugin");
 const preprocessCss = require("./lib/webpack/preprocessCss.js");
 
 const mode = process.env.NODE_ENV || "development";
@@ -82,6 +83,13 @@ const serverConfig = {
   },
   mode,
   devtool: prod ? false : "source-map",
+  plugins: [
+    !prod &&
+      new NodemonPlugin({
+        script: "./dist/server/server.js",
+        watch: path.resolve("./dist/server"),
+      }),
+  ].filter(Boolean),
 };
 
 module.exports = [serverConfig];
