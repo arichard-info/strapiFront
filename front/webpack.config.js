@@ -1,13 +1,14 @@
 const path = require("path");
 const NodemonPlugin = require("nodemon-webpack-plugin");
 const preprocessCss = require("./lib/webpack/preprocessCss.js");
+const miniCssExtractPlugin = require("mini-css-extract-plugin");
 
 const mode = process.env.NODE_ENV || "development";
 const prod = mode === "production";
 
 const clientConfig = {
   entry: {
-    bundle: ["./src/main.js"],
+    bundle: ["./src/client/index.js"],
   },
   resolve: {
     alias: {
@@ -18,9 +19,9 @@ const clientConfig = {
     mainFields: ["svelte", "browser", "module", "main"],
   },
   output: {
-    path: __dirname + "/dist",
-    filename: "[name].js",
-    chunkFilename: "[name].[id].js",
+    path: __dirname + "/dist/client",
+    filename: "client.js",
+    chunkFilename: "client.[id].js",
   },
   module: {
     rules: [
@@ -31,6 +32,8 @@ const clientConfig = {
           options: {
             emitCss: false,
             hotReload: false,
+            hydratable: true,
+            generate: null,
             preprocess: {
               style: preprocessCss("client"),
             },
@@ -92,4 +95,24 @@ const serverConfig = {
   ].filter(Boolean),
 };
 
-module.exports = [serverConfig];
+const styleConfig = {
+  mode,
+  entry: { style: "./src/style/main.scss" },
+  output: {
+    path: __dirname + "/dist",
+    filename: "style.js",
+    chunkFilename: "style.[id].js",
+  },
+  module: {
+    rules: [
+      {
+        test: /\.s[ac]ss$/i,
+        use: [miniCssExtractPlugin.loader, "css-loader", "sass-loader"],
+      },
+    ],
+  },
+  plugins: [new miniCssExtractPlugin({ filename: "[name].css" })],
+  devtool: prod ? false : "source-map",
+};
+
+module.exports = [clientConfig, serverConfig, styleConfig];

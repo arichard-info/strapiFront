@@ -5,8 +5,9 @@ import middlewareRender from "@/server/middlewares/render";
 
 const router = express.Router();
 
-routes.forEach((route) => {
-  router.get(route.path, middlewareData(route), middlewareRender(route));
+Object.entries(routes).map(([type, route]) => {
+  const config = { ...route, type };
+  router.get(route.path, middlewareData(config), middlewareRender(config));
 });
 
 export default router;

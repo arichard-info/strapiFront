@@ -1,6 +1,38 @@
 /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
+/***/ "./node_modules/@polka/url/index.js":
+/*!******************************************!*\
+  !*** ./node_modules/@polka/url/index.js ***!
+  \******************************************/
+/***/ ((module) => {
+
+module.exports = function (req) {
+	let url = req.url;
+	if (url === void 0) return url;
+
+	let obj = req._parsedUrl;
+	if (obj && obj._raw === url) return obj;
+
+	obj = {};
+	obj.query = obj.search = null;
+	obj.href = obj.path = obj.pathname = url;
+
+	let idx = url.indexOf('?', 1);
+	if (idx !== -1) {
+		obj.search = url.substring(idx);
+		obj.query = obj.search.substring(1);
+		obj.pathname = url.substring(0, idx);
+	}
+
+	obj._raw = url;
+
+	return (req._parsedUrl = obj);
+}
+
+
+/***/ }),
+
 /***/ "./node_modules/accepts/index.js":
 /*!***************************************!*\
   !*** ./node_modules/accepts/index.js ***!
@@ -19726,6 +19758,245 @@ function mixinProperties (obj, proto) {
 
 /***/ }),
 
+/***/ "./node_modules/sirv/index.js":
+/*!************************************!*\
+  !*** ./node_modules/sirv/index.js ***!
+  \************************************/
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+const fs = __webpack_require__(/*! fs */ "fs");
+const { join, resolve } = __webpack_require__(/*! path */ "path");
+const parser = __webpack_require__(/*! @polka/url */ "./node_modules/@polka/url/index.js");
+const mime = __webpack_require__(/*! mime/lite */ "./node_modules/sirv/node_modules/mime/lite.js");
+
+const FILES = {};
+const noop = () => {};
+
+function toAssume(uri, extns) {
+	let i=0, x, len=uri.length - 1;
+	if (uri.charCodeAt(len) === 47) {
+		uri = uri.substring(0, len);
+	}
+
+	let arr=[], tmp=`${uri}/index`;
+	for (; i < extns.length; i++) {
+		x = '.' + extns[i];
+		if (uri) arr.push(uri + x);
+		arr.push(tmp + x);
+	}
+
+	return arr;
+}
+
+function find(uri, extns) {
+	if (!!~uri.lastIndexOf('.')) return FILES[uri];
+	let i=0, data, arr=toAssume(uri, extns);
+	for (; i < arr.length; i++) {
+		if (data=FILES[arr[i]]) break;
+	}
+	return data;
+}
+
+function is404(res) {
+	return (res.statusCode=404,res.end());
+}
+
+function list(dir, fn, pre='') {
+	let i=0, abs, stats;
+	let arr = fs.readdirSync(dir);
+	for (; i < arr.length; i++) {
+		abs = join(dir, arr[i]);
+		stats = fs.statSync(abs);
+		stats.isDirectory()
+			? list(abs, fn, join(pre, arr[i]))
+			: fn(join(pre, arr[i]), abs, stats);
+	}
+}
+
+module.exports = function (dir, opts={}) {
+	dir = resolve(dir || '.');
+
+	let isNotFound = opts.onNoMatch || is404;
+	let extensions = opts.extensions || ['html', 'htm'];
+
+	if (opts.dev) {
+		return function (req, res, next) {
+			let uri = decodeURIComponent(req.path || req.pathname || parser(req).pathname);
+			let arr = uri.includes('.') ? [uri] : toAssume(uri, extensions);
+			let file = arr.map(x => join(dir, x)).find(fs.existsSync);
+			if (!file) return next ? next() : isNotFound(res);
+			res.setHeader('Content-Type', mime.getType(file));
+			fs.createReadStream(file).pipe(res);
+		}
+	}
+
+	let setHeaders = opts.setHeaders || noop;
+	let cc = opts.maxAge != null && `public,max-age=${opts.maxAge}`;
+	if (cc && opts.immutable) cc += ',immutable';
+
+	list(dir, (name, abs, stats) => {
+		if (!opts.dotfiles && name.charAt(0) === '.') {
+			return;
+		}
+
+		let headers = {
+			'Content-Length': stats.size,
+			'Content-Type': mime.getType(name),
+			'Last-Modified': stats.mtime.toUTCString(),
+		};
+
+		if (cc) headers['Cache-Control'] = cc;
+		if (opts.etag) headers['ETag'] = `W/"${stats.size}-${stats.mtime.getTime()}"`;
+
+		FILES['/' + name.replace(/\\+/g, '/')] = { abs, stats, headers };
+	});
+
+	return function (req, res, next) {
+		let pathname = decodeURIComponent(req.path || req.pathname || parser(req).pathname);
+		let data = find(pathname, extensions);
+		if (!data) return next ? next() : isNotFound(res);
+
+		setHeaders(res, pathname, data.stats);
+		res.writeHead(200, data.headers);
+
+		fs.createReadStream(data.abs).pipe(res);
+	};
+}
+
+
+/***/ }),
+
+/***/ "./node_modules/sirv/node_modules/mime/Mime.js":
+/*!*****************************************************!*\
+  !*** ./node_modules/sirv/node_modules/mime/Mime.js ***!
+  \*****************************************************/
+/***/ ((module) => {
+
+"use strict";
+
+
+/**
+ * @param typeMap [Object] Map of MIME type -> Array[extensions]
+ * @param ...
+ */
+function Mime() {
+  this._types = Object.create(null);
+  this._extensions = Object.create(null);
+
+  for (var i = 0; i < arguments.length; i++) {
+    this.define(arguments[i]);
+  }
+
+  this.define = this.define.bind(this);
+  this.getType = this.getType.bind(this);
+  this.getExtension = this.getExtension.bind(this);
+}
+
+/**
+ * Define mimetype -> extension mappings.  Each key is a mime-type that maps
+ * to an array of extensions associated with the type.  The first extension is
+ * used as the default extension for the type.
+ *
+ * e.g. mime.define({'audio/ogg', ['oga', 'ogg', 'spx']});
+ *
+ * If a type declares an extension that has already been defined, an error will
+ * be thrown.  To suppress this error and force the extension to be associated
+ * with the new type, pass `force`=true.  Alternatively, you may prefix the
+ * extension with "*" to map the type to extension, without mapping the
+ * extension to the type.
+ *
+ * e.g. mime.define({'audio/wav', ['wav']}, {'audio/x-wav', ['*wav']});
+ *
+ *
+ * @param map (Object) type definitions
+ * @param force (Boolean) if true, force overriding of existing definitions
+ */
+Mime.prototype.define = function(typeMap, force) {
+  for (var type in typeMap) {
+    var extensions = typeMap[type].map(function(t) {return t.toLowerCase()});
+    type = type.toLowerCase();
+
+    for (var i = 0; i < extensions.length; i++) {
+      var ext = extensions[i];
+
+      // '*' prefix = not the preferred type for this extension.  So fixup the
+      // extension, and skip it.
+      if (ext[0] == '*') {
+        continue;
+      }
+
+      if (!force && (ext in this._types)) {
+        throw new Error(
+          'Attempt to change mapping for "' + ext +
+          '" extension from "' + this._types[ext] + '" to "' + type +
+          '". Pass `force=true` to allow this, otherwise remove "' + ext +
+          '" from the list of extensions for "' + type + '".'
+        );
+      }
+
+      this._types[ext] = type;
+    }
+
+    // Use first extension as default
+    if (force || !this._extensions[type]) {
+      var ext = extensions[0];
+      this._extensions[type] = (ext[0] != '*') ? ext : ext.substr(1)
+    }
+  }
+};
+
+/**
+ * Lookup a mime type based on extension
+ */
+Mime.prototype.getType = function(path) {
+  path = String(path);
+  var last = path.replace(/^.*[/\\]/, '').toLowerCase();
+  var ext = last.replace(/^.*\./, '').toLowerCase();
+
+  var hasPath = last.length < path.length;
+  var hasDot = ext.length < last.length - 1;
+
+  return (hasDot || !hasPath) && this._types[ext] || null;
+};
+
+/**
+ * Return file extension associated with a mime type
+ */
+Mime.prototype.getExtension = function(type) {
+  type = /^\s*([^;\s]*)/.test(type) && RegExp.$1;
+  return type && this._extensions[type.toLowerCase()] || null;
+};
+
+module.exports = Mime;
+
+
+/***/ }),
+
+/***/ "./node_modules/sirv/node_modules/mime/lite.js":
+/*!*****************************************************!*\
+  !*** ./node_modules/sirv/node_modules/mime/lite.js ***!
+  \*****************************************************/
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+
+var Mime = __webpack_require__(/*! ./Mime */ "./node_modules/sirv/node_modules/mime/Mime.js");
+module.exports = new Mime(__webpack_require__(/*! ./types/standard */ "./node_modules/sirv/node_modules/mime/types/standard.js"));
+
+
+/***/ }),
+
+/***/ "./node_modules/sirv/node_modules/mime/types/standard.js":
+/*!***************************************************************!*\
+  !*** ./node_modules/sirv/node_modules/mime/types/standard.js ***!
+  \***************************************************************/
+/***/ ((module) => {
+
+module.exports = {"application/andrew-inset":["ez"],"application/applixware":["aw"],"application/atom+xml":["atom"],"application/atomcat+xml":["atomcat"],"application/atomdeleted+xml":["atomdeleted"],"application/atomsvc+xml":["atomsvc"],"application/atsc-dwd+xml":["dwd"],"application/atsc-held+xml":["held"],"application/atsc-rsat+xml":["rsat"],"application/bdoc":["bdoc"],"application/calendar+xml":["xcs"],"application/ccxml+xml":["ccxml"],"application/cdfx+xml":["cdfx"],"application/cdmi-capability":["cdmia"],"application/cdmi-container":["cdmic"],"application/cdmi-domain":["cdmid"],"application/cdmi-object":["cdmio"],"application/cdmi-queue":["cdmiq"],"application/cu-seeme":["cu"],"application/dash+xml":["mpd"],"application/davmount+xml":["davmount"],"application/docbook+xml":["dbk"],"application/dssc+der":["dssc"],"application/dssc+xml":["xdssc"],"application/ecmascript":["ecma","es"],"application/emma+xml":["emma"],"application/emotionml+xml":["emotionml"],"application/epub+zip":["epub"],"application/exi":["exi"],"application/fdt+xml":["fdt"],"application/font-tdpfr":["pfr"],"application/geo+json":["geojson"],"application/gml+xml":["gml"],"application/gpx+xml":["gpx"],"application/gxf":["gxf"],"application/gzip":["gz"],"application/hjson":["hjson"],"application/hyperstudio":["stk"],"application/inkml+xml":["ink","inkml"],"application/ipfix":["ipfix"],"application/its+xml":["its"],"application/java-archive":["jar","war","ear"],"application/java-serialized-object":["ser"],"application/java-vm":["class"],"application/javascript":["js","mjs"],"application/json":["json","map"],"application/json5":["json5"],"application/jsonml+json":["jsonml"],"application/ld+json":["jsonld"],"application/lgr+xml":["lgr"],"application/lost+xml":["lostxml"],"application/mac-binhex40":["hqx"],"application/mac-compactpro":["cpt"],"application/mads+xml":["mads"],"application/manifest+json":["webmanifest"],"application/marc":["mrc"],"application/marcxml+xml":["mrcx"],"application/mathematica":["ma","nb","mb"],"application/mathml+xml":["mathml"],"application/mbox":["mbox"],"application/mediaservercontrol+xml":["mscml"],"application/metalink+xml":["metalink"],"application/metalink4+xml":["meta4"],"application/mets+xml":["mets"],"application/mmt-aei+xml":["maei"],"application/mmt-usd+xml":["musd"],"application/mods+xml":["mods"],"application/mp21":["m21","mp21"],"application/mp4":["mp4s","m4p"],"application/mrb-consumer+xml":["*xdf"],"application/mrb-publish+xml":["*xdf"],"application/msword":["doc","dot"],"application/mxf":["mxf"],"application/n-quads":["nq"],"application/n-triples":["nt"],"application/node":["cjs"],"application/octet-stream":["bin","dms","lrf","mar","so","dist","distz","pkg","bpk","dump","elc","deploy","exe","dll","deb","dmg","iso","img","msi","msp","msm","buffer"],"application/oda":["oda"],"application/oebps-package+xml":["opf"],"application/ogg":["ogx"],"application/omdoc+xml":["omdoc"],"application/onenote":["onetoc","onetoc2","onetmp","onepkg"],"application/oxps":["oxps"],"application/p2p-overlay+xml":["relo"],"application/patch-ops-error+xml":["*xer"],"application/pdf":["pdf"],"application/pgp-encrypted":["pgp"],"application/pgp-signature":["asc","sig"],"application/pics-rules":["prf"],"application/pkcs10":["p10"],"application/pkcs7-mime":["p7m","p7c"],"application/pkcs7-signature":["p7s"],"application/pkcs8":["p8"],"application/pkix-attr-cert":["ac"],"application/pkix-cert":["cer"],"application/pkix-crl":["crl"],"application/pkix-pkipath":["pkipath"],"application/pkixcmp":["pki"],"application/pls+xml":["pls"],"application/postscript":["ai","eps","ps"],"application/provenance+xml":["provx"],"application/pskc+xml":["pskcxml"],"application/raml+yaml":["raml"],"application/rdf+xml":["rdf","owl"],"application/reginfo+xml":["rif"],"application/relax-ng-compact-syntax":["rnc"],"application/resource-lists+xml":["rl"],"application/resource-lists-diff+xml":["rld"],"application/rls-services+xml":["rs"],"application/route-apd+xml":["rapd"],"application/route-s-tsid+xml":["sls"],"application/route-usd+xml":["rusd"],"application/rpki-ghostbusters":["gbr"],"application/rpki-manifest":["mft"],"application/rpki-roa":["roa"],"application/rsd+xml":["rsd"],"application/rss+xml":["rss"],"application/rtf":["rtf"],"application/sbml+xml":["sbml"],"application/scvp-cv-request":["scq"],"application/scvp-cv-response":["scs"],"application/scvp-vp-request":["spq"],"application/scvp-vp-response":["spp"],"application/sdp":["sdp"],"application/senml+xml":["senmlx"],"application/sensml+xml":["sensmlx"],"application/set-payment-initiation":["setpay"],"application/set-registration-initiation":["setreg"],"application/shf+xml":["shf"],"application/sieve":["siv","sieve"],"application/smil+xml":["smi","smil"],"application/sparql-query":["rq"],"application/sparql-results+xml":["srx"],"application/srgs":["gram"],"application/srgs+xml":["grxml"],"application/sru+xml":["sru"],"application/ssdl+xml":["ssdl"],"application/ssml+xml":["ssml"],"application/swid+xml":["swidtag"],"application/tei+xml":["tei","teicorpus"],"application/thraud+xml":["tfi"],"application/timestamped-data":["tsd"],"application/toml":["toml"],"application/ttml+xml":["ttml"],"application/ubjson":["ubj"],"application/urc-ressheet+xml":["rsheet"],"application/urc-targetdesc+xml":["td"],"application/voicexml+xml":["vxml"],"application/wasm":["wasm"],"application/widget":["wgt"],"application/winhlp":["hlp"],"application/wsdl+xml":["wsdl"],"application/wspolicy+xml":["wspolicy"],"application/xaml+xml":["xaml"],"application/xcap-att+xml":["xav"],"application/xcap-caps+xml":["xca"],"application/xcap-diff+xml":["xdf"],"application/xcap-el+xml":["xel"],"application/xcap-error+xml":["xer"],"application/xcap-ns+xml":["xns"],"application/xenc+xml":["xenc"],"application/xhtml+xml":["xhtml","xht"],"application/xliff+xml":["xlf"],"application/xml":["xml","xsl","xsd","rng"],"application/xml-dtd":["dtd"],"application/xop+xml":["xop"],"application/xproc+xml":["xpl"],"application/xslt+xml":["*xsl","xslt"],"application/xspf+xml":["xspf"],"application/xv+xml":["mxml","xhvml","xvml","xvm"],"application/yang":["yang"],"application/yin+xml":["yin"],"application/zip":["zip"],"audio/3gpp":["*3gpp"],"audio/adpcm":["adp"],"audio/basic":["au","snd"],"audio/midi":["mid","midi","kar","rmi"],"audio/mobile-xmf":["mxmf"],"audio/mp3":["*mp3"],"audio/mp4":["m4a","mp4a"],"audio/mpeg":["mpga","mp2","mp2a","mp3","m2a","m3a"],"audio/ogg":["oga","ogg","spx"],"audio/s3m":["s3m"],"audio/silk":["sil"],"audio/wav":["wav"],"audio/wave":["*wav"],"audio/webm":["weba"],"audio/xm":["xm"],"font/collection":["ttc"],"font/otf":["otf"],"font/ttf":["ttf"],"font/woff":["woff"],"font/woff2":["woff2"],"image/aces":["exr"],"image/apng":["apng"],"image/avif":["avif"],"image/bmp":["bmp"],"image/cgm":["cgm"],"image/dicom-rle":["drle"],"image/emf":["emf"],"image/fits":["fits"],"image/g3fax":["g3"],"image/gif":["gif"],"image/heic":["heic"],"image/heic-sequence":["heics"],"image/heif":["heif"],"image/heif-sequence":["heifs"],"image/hej2k":["hej2"],"image/hsj2":["hsj2"],"image/ief":["ief"],"image/jls":["jls"],"image/jp2":["jp2","jpg2"],"image/jpeg":["jpeg","jpg","jpe"],"image/jph":["jph"],"image/jphc":["jhc"],"image/jpm":["jpm"],"image/jpx":["jpx","jpf"],"image/jxr":["jxr"],"image/jxra":["jxra"],"image/jxrs":["jxrs"],"image/jxs":["jxs"],"image/jxsc":["jxsc"],"image/jxsi":["jxsi"],"image/jxss":["jxss"],"image/ktx":["ktx"],"image/ktx2":["ktx2"],"image/png":["png"],"image/sgi":["sgi"],"image/svg+xml":["svg","svgz"],"image/t38":["t38"],"image/tiff":["tif","tiff"],"image/tiff-fx":["tfx"],"image/webp":["webp"],"image/wmf":["wmf"],"message/disposition-notification":["disposition-notification"],"message/global":["u8msg"],"message/global-delivery-status":["u8dsn"],"message/global-disposition-notification":["u8mdn"],"message/global-headers":["u8hdr"],"message/rfc822":["eml","mime"],"model/3mf":["3mf"],"model/gltf+json":["gltf"],"model/gltf-binary":["glb"],"model/iges":["igs","iges"],"model/mesh":["msh","mesh","silo"],"model/mtl":["mtl"],"model/obj":["obj"],"model/stl":["stl"],"model/vrml":["wrl","vrml"],"model/x3d+binary":["*x3db","x3dbz"],"model/x3d+fastinfoset":["x3db"],"model/x3d+vrml":["*x3dv","x3dvz"],"model/x3d+xml":["x3d","x3dz"],"model/x3d-vrml":["x3dv"],"text/cache-manifest":["appcache","manifest"],"text/calendar":["ics","ifb"],"text/coffeescript":["coffee","litcoffee"],"text/css":["css"],"text/csv":["csv"],"text/html":["html","htm","shtml"],"text/jade":["jade"],"text/jsx":["jsx"],"text/less":["less"],"text/markdown":["markdown","md"],"text/mathml":["mml"],"text/mdx":["mdx"],"text/n3":["n3"],"text/plain":["txt","text","conf","def","list","log","in","ini"],"text/richtext":["rtx"],"text/rtf":["*rtf"],"text/sgml":["sgml","sgm"],"text/shex":["shex"],"text/slim":["slim","slm"],"text/spdx":["spdx"],"text/stylus":["stylus","styl"],"text/tab-separated-values":["tsv"],"text/troff":["t","tr","roff","man","me","ms"],"text/turtle":["ttl"],"text/uri-list":["uri","uris","urls"],"text/vcard":["vcard"],"text/vtt":["vtt"],"text/xml":["*xml"],"text/yaml":["yaml","yml"],"video/3gpp":["3gp","3gpp"],"video/3gpp2":["3g2"],"video/h261":["h261"],"video/h263":["h263"],"video/h264":["h264"],"video/jpeg":["jpgv"],"video/jpm":["*jpm","jpgm"],"video/mj2":["mj2","mjp2"],"video/mp2t":["ts"],"video/mp4":["mp4","mp4v","mpg4"],"video/mpeg":["mpeg","mpg","mpe","m1v","m2v"],"video/ogg":["ogv"],"video/quicktime":["qt","mov"],"video/webm":["webm"]};
+
+/***/ }),
+
 /***/ "./node_modules/statuses/codes.json":
 /*!******************************************!*\
   !*** ./node_modules/statuses/codes.json ***!
@@ -19919,9 +20190,13 @@ const App = (0,svelte_internal__WEBPACK_IMPORTED_MODULE_0__.create_ssr_component
 	if ($$props.blocks === void 0 && $$bindings.blocks && blocks !== void 0) $$bindings.blocks(blocks);
 
 	return `${(0,svelte_internal__WEBPACK_IMPORTED_MODULE_0__.validate_component)(_components_Admin_Admin_svelte__WEBPACK_IMPORTED_MODULE_3__.default || svelte_internal__WEBPACK_IMPORTED_MODULE_0__.missing_component, "svelte:component").$$render($$result, {}, {}, {
-		default: () => `${(0,svelte_internal__WEBPACK_IMPORTED_MODULE_0__.validate_component)(layout || svelte_internal__WEBPACK_IMPORTED_MODULE_0__.missing_component, "svelte:component").$$render($$result, {}, {}, {
-			default: () => `${(0,svelte_internal__WEBPACK_IMPORTED_MODULE_0__.validate_component)(template || svelte_internal__WEBPACK_IMPORTED_MODULE_0__.missing_component, "svelte:component").$$render($$result, { structure }, {}, {})}`
-		})}`
+		default: () => `${layout
+		? `${(0,svelte_internal__WEBPACK_IMPORTED_MODULE_0__.validate_component)(layout || svelte_internal__WEBPACK_IMPORTED_MODULE_0__.missing_component, "svelte:component").$$render($$result, {}, {}, {
+				default: () => `${template
+				? `${(0,svelte_internal__WEBPACK_IMPORTED_MODULE_0__.validate_component)(template || svelte_internal__WEBPACK_IMPORTED_MODULE_0__.missing_component, "svelte:component").$$render($$result, { structure }, {}, {})}`
+				: ``}`
+			})}`
+		: ``}`
 	})}`;
 });
 
@@ -22592,8 +22867,11 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => __WEBPACK_DEFAULT_EXPORT__
 /* harmony export */ });
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = ({
-  "commons.paragraph": Promise.all(/*! import() */[__webpack_require__.e("vendors-node_modules_showdown_dist_showdown_js"), __webpack_require__.e("src_components_Blocks_Paragraph_Paragraph_svelte")]).then(__webpack_require__.bind(__webpack_require__, /*! @/components/Blocks/Paragraph/Paragraph */ "./src/components/Blocks/Paragraph/Paragraph.svelte")),
-  "commons.image": __webpack_require__.e(/*! import() */ "src_components_Blocks_Image_Image_svelte").then(__webpack_require__.bind(__webpack_require__, /*! @/components/Blocks/Image/Image */ "./src/components/Blocks/Image/Image.svelte")),
+  "commons.paragraph": {
+    render: () => Promise.all(/*! import() */[__webpack_require__.e("vendors-node_modules_showdown_dist_showdown_js"), __webpack_require__.e("src_components_Blocks_Paragraph_Paragraph_svelte")]).then(__webpack_require__.bind(__webpack_require__, /*! @/components/Blocks/Paragraph/Paragraph */ "./src/components/Blocks/Paragraph/Paragraph.svelte")),
+    admin: () => Promise.all(/*! import() */[__webpack_require__.e("vendors-node_modules_showdown_dist_showdown_js"), __webpack_require__.e("src_components_Blocks_Paragraph_Paragraph_admin_svelte")]).then(__webpack_require__.bind(__webpack_require__, /*! @/components/Blocks/Paragraph/Paragraph.admin */ "./src/components/Blocks/Paragraph/Paragraph.admin.svelte")),
+  },
+  "commons.image": { render: () => __webpack_require__.e(/*! import() */ "src_components_Blocks_Image_Image_svelte").then(__webpack_require__.bind(__webpack_require__, /*! @/components/Blocks/Image/Image */ "./src/components/Blocks/Image/Image.svelte")) },
 });
 
 
@@ -22610,18 +22888,16 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "default": () => __WEBPACK_DEFAULT_EXPORT__
 /* harmony export */ });
-/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = ([
-  {
-    type: "article",
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = ({
+  article: {
     path: "/blog/*",
-    template: __webpack_require__.e(/*! import() */ "src_components_Templates_Article_Article_svelte").then(__webpack_require__.bind(__webpack_require__, /*! @/components/Templates/Article/Article.svelte */ "./src/components/Templates/Article/Article.svelte")),
+    template: () => __webpack_require__.e(/*! import() */ "src_components_Templates_Article_Article_svelte").then(__webpack_require__.bind(__webpack_require__, /*! @/components/Templates/Article/Article.svelte */ "./src/components/Templates/Article/Article.svelte")),
   },
-  {
-    type: "page",
+  page: {
     path: "*",
-    template: __webpack_require__.e(/*! import() */ "src_components_Templates_Page_Page_svelte").then(__webpack_require__.bind(__webpack_require__, /*! @/components/Templates/Page/Page.svelte */ "./src/components/Templates/Page/Page.svelte")),
+    template: () => __webpack_require__.e(/*! import() */ "src_components_Templates_Page_Page_svelte").then(__webpack_require__.bind(__webpack_require__, /*! @/components/Templates/Page/Page.svelte */ "./src/components/Templates/Page/Page.svelte")),
   },
-]);
+});
 
 
 /***/ }),
@@ -22670,6 +22946,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = ((route) => async (req, res, next) => {
   const resolver = await _resolvers__WEBPACK_IMPORTED_MODULE_0__.default[route.type];
   const structure = await resolver.default();
+  structure.type = route.type;
 
   if (!structure) {
     res.status = 404;
@@ -22707,6 +22984,43 @@ __webpack_require__.r(__webpack_exports__);
 
 /***/ }),
 
+/***/ "./src/server/middlewares/render/html.js":
+/*!***********************************************!*\
+  !*** ./src/server/middlewares/render/html.js ***!
+  \***********************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => __WEBPACK_DEFAULT_EXPORT__
+/* harmony export */ });
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (({ html = "", css = "", head = "", structure = "" }) =>
+  `<!DOCTYPE html>
+    <html lang="fr">
+        <head>
+            <meta charset="utf-8">
+            <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+            <link rel="stylesheet" href="/styles/style.css" />
+            ${head}
+            <style>${css}</style>
+        </head>
+        <body>
+            <div id="_app">
+                ${html}
+            </div>
+            <script id="_data" type="application/json">
+                ${JSON.stringify(structure)}
+            </script>
+            <script src="/client/client.js"></script>
+        </body>
+    </html>
+    `);
+
+
+/***/ }),
+
 /***/ "./src/server/middlewares/render/index.js":
 /*!************************************************!*\
   !*** ./src/server/middlewares/render/index.js ***!
@@ -22721,13 +23035,15 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _components_App_svelte__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @/components/App.svelte */ "./src/components/App.svelte");
 /* harmony import */ var _components_Layout_Layout_svelte__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @/components/Layout/Layout.svelte */ "./src/components/Layout/Layout.svelte");
 /* harmony import */ var _components_Blocks_Blocks_registry__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @/components/Blocks/Blocks.registry */ "./src/components/Blocks/Blocks.registry.js");
+/* harmony import */ var _html__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./html */ "./src/server/middlewares/render/html.js");
+
 
 
 
 
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = ((route) => async (req, res, next) => {
   const structure = req.structure;
-  const { default: template } = await route.template;
+  const { default: template } = await route.template();
   const { default: layout } = route.layout ? await route.layout : _components_Layout_Layout_svelte__WEBPACK_IMPORTED_MODULE_1__;
 
   const blocks =
@@ -22736,7 +23052,7 @@ __webpack_require__.r(__webpack_exports__);
     Object.fromEntries(
       await Promise.all(
         structure.content.map(async (block) => {
-          const component = await _components_Blocks_Blocks_registry__WEBPACK_IMPORTED_MODULE_2__.default[block.__component];
+          const component = await _components_Blocks_Blocks_registry__WEBPACK_IMPORTED_MODULE_2__.default[block.__component].render();
           return [block.__component, component.default];
         })
       )
@@ -22749,7 +23065,13 @@ __webpack_require__.r(__webpack_exports__);
     layout,
   });
 
-  res.send(html);
+  const renderHtml = (0,_html__WEBPACK_IMPORTED_MODULE_3__.default)({
+    html,
+    css: css.code,
+    head,
+    structure,
+  });
+  res.send(renderHtml);
 });
 
 
@@ -22768,13 +23090,17 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ });
 /* harmony import */ var express__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! express */ "./node_modules/express/index.js");
 /* harmony import */ var express__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(express__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var _routerPage__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./routerPage */ "./src/server/router/routerPage.js");
+/* harmony import */ var sirv__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! sirv */ "./node_modules/sirv/index.js");
+/* harmony import */ var sirv__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(sirv__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var _routerPage__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./routerPage */ "./src/server/router/routerPage.js");
+
 
 
 
 const router = express__WEBPACK_IMPORTED_MODULE_0___default().Router();
 
-router.use("/*", _routerPage__WEBPACK_IMPORTED_MODULE_1__.default);
+router.use("/client/", sirv__WEBPACK_IMPORTED_MODULE_1___default()("dist/client", { dev: true }));
+router.use("/*", _routerPage__WEBPACK_IMPORTED_MODULE_2__.default);
 
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (router);
 
@@ -22804,8 +23130,9 @@ __webpack_require__.r(__webpack_exports__);
 
 const router = express__WEBPACK_IMPORTED_MODULE_0___default().Router();
 
-_router__WEBPACK_IMPORTED_MODULE_1__.default.forEach((route) => {
-  router.get(route.path, (0,_server_middlewares_data__WEBPACK_IMPORTED_MODULE_2__.default)(route), (0,_server_middlewares_render__WEBPACK_IMPORTED_MODULE_3__.default)(route));
+Object.entries(_router__WEBPACK_IMPORTED_MODULE_1__.default).map(([type, route]) => {
+  const config = { ...route, type };
+  router.get(route.path, (0,_server_middlewares_data__WEBPACK_IMPORTED_MODULE_2__.default)(config), (0,_server_middlewares_render__WEBPACK_IMPORTED_MODULE_3__.default)(config));
 });
 
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (router);

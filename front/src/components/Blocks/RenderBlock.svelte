@@ -1,27 +1,31 @@
 <script>
+  import blockRegistry from "./Blocks.registry";
   export let component = null;
-  export let type = "";
   export let data = {};
 
-  let renderComponent = component;
+  const blockConfig = blockRegistry[data.__component];
+
   let adminComponent = null;
   let editable = true;
   let adminUI = false;
 
-  const toggleAdmin = async e => {
-    e.stopPropagation();
-    if (!adminComponent && editable) {
-      adminComponent = await import(
-        `@/components/Blocks/${type}/${type}.admin.svelte`
-      );
-      if (adminComponent) editable = true;
-    }
-    if (editable) adminUI = true;
+  const loadAdmin = async () => {
+    adminComponent = await blockConfig
+      .admin()
+      .then(ref => ref.default)
+      .catch(() => null);
+    editable = !!adminComponent;
+    if (!editable) adminUI = false;
   };
+
+  $: adminUI && !adminComponent && loadAdmin();
 </script>
 
-<div on:click={toggleAdmin}>
-  {#if component}
-    <svelte:component this={renderComponent} {...data} />
+<div>
+  <input type="checkbox" bind:checked={adminUI} />
+  {#if editable && adminUI && adminComponent}
+    <svelte:component this={adminComponent} {...data} />
+  {:else if component}
+    <svelte:component this={component} {...data} />
   {/if}
 </div>

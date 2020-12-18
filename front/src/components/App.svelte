@@ -13,7 +13,11 @@
 </script>
 
 <svelte:component this={Admin}>
-  <svelte:component this={layout}>
-    <svelte:component this={template} {structure} />
-  </svelte:component>
+  {#if layout}
+    <svelte:component this={layout}>
+      {#if template}
+        <svelte:component this={template} {structure} />
+      {/if}
+    </svelte:component>
+  {/if}
 </svelte:component>

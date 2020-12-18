@@ -1,12 +1,10 @@
-export default [
-  {
-    type: "article",
+export default {
+  article: {
     path: "/blog/*",
-    template: import("@/components/Templates/Article/Article.svelte"),
+    template: () => import("@/components/Templates/Article/Article.svelte"),
   },
-  {
-    type: "page",
+  page: {
     path: "*",
-    template: import("@/components/Templates/Page/Page.svelte"),
+    template: () => import("@/components/Templates/Page/Page.svelte"),
   },
-];
+};

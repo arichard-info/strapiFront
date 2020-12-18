@@ -1,4 +1,7 @@
 export default {
-  "commons.paragraph": import("@/components/Blocks/Paragraph/Paragraph"),
-  "commons.image": import("@/components/Blocks/Image/Image"),
+  "commons.paragraph": {
+    render: () => import("@/components/Blocks/Paragraph/Paragraph"),
+    admin: () => import("@/components/Blocks/Paragraph/Paragraph.admin"),
+  },
+  "commons.image": { render: () => import("@/components/Blocks/Image/Image") },
 };
