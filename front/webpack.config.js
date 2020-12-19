@@ -99,7 +99,7 @@ const styleConfig = {
   mode,
   entry: { style: "./src/style/main.scss" },
   output: {
-    path: __dirname + "/dist",
+    path: __dirname + "/dist/assets",
     filename: "style.js",
     chunkFilename: "style.[id].js",
   },

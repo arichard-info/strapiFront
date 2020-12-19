@@ -7,8 +7,10 @@
 </script>
 
 {#if structure}
-  <h1>{structure.title}</h1>
-  {#if structure.content && structure.content.length}
-    <Blocks blocks={structure.content} components={$blocks} />
-  {/if}
+  <div class="container">
+    <h1>{structure.title}</h1>
+    {#if structure.content && structure.content.length}
+      <Blocks blocks={structure.content} components={$blocks} />
+    {/if}
+  </div>
 {/if}

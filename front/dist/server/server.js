@@ -23002,7 +23002,7 @@ __webpack_require__.r(__webpack_exports__);
             <meta charset="utf-8">
             <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1" />
             <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-            <link rel="stylesheet" href="/styles/style.css" />
+            <link rel="stylesheet" href="/assets/style.css" />
             ${head}
             <style>${css}</style>
         </head>
@@ -23100,6 +23100,7 @@ __webpack_require__.r(__webpack_exports__);
 const router = express__WEBPACK_IMPORTED_MODULE_0___default().Router();
 
 router.use("/client/", sirv__WEBPACK_IMPORTED_MODULE_1___default()("dist/client", { dev: true }));
+router.use("/assets/", sirv__WEBPACK_IMPORTED_MODULE_1___default()("dist/assets", { dev: true }));
 router.use("/*", _routerPage__WEBPACK_IMPORTED_MODULE_2__.default);
 
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (router);
