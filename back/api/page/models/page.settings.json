@@ -33,6 +33,9 @@
     "parent": {
       "model": "page",
       "via": "children"
+    },
+    "fullslug": {
+      "type": "string"
     }
   }
 }
