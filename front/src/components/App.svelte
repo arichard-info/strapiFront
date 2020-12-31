@@ -14,10 +14,12 @@
 
 <svelte:component this={Admin}>
   {#if layout}
-    <svelte:component this={layout}>
+    <svelte:component this={layout} data={structure.layout} >
       {#if template}
-        <svelte:component this={template} {structure} />
+        <svelte:component this={template} data={structure.data} />
       {/if}
     </svelte:component>
+  {:else if template}
+    <svelte:component this={template} data={structure.data} />
   {/if}
 </svelte:component>
