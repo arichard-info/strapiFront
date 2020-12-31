@@ -13,6 +13,7 @@ const init = async () => {
     ? await routeConfig.layout()
     : await import("@/components/Layout/Layout.svelte");
   const blocks =
+    structure &&
     structure.content &&
     structure.content.length &&
     Object.fromEntries(

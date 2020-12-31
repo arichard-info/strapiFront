@@ -9,6 +9,7 @@ export default (route) => async (req, res, next) => {
   const { default: layout } = route.layout ? await route.layout : Layout;
 
   const blocks =
+    structure &&
     structure.content &&
     structure.content.length &&
     Object.fromEntries(

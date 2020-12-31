@@ -22929,61 +22929,6 @@ app.listen(port, () => {
 
 /***/ }),
 
-/***/ "./src/server/middlewares/data/index.js":
-/*!**********************************************!*\
-  !*** ./src/server/middlewares/data/index.js ***!
-  \**********************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => __WEBPACK_DEFAULT_EXPORT__
-/* harmony export */ });
-/* harmony import */ var _resolvers__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./resolvers */ "./src/server/middlewares/data/resolvers/index.js");
-
-
-/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = ((route) => async (req, res, next) => {
-  const resolver = await _resolvers__WEBPACK_IMPORTED_MODULE_0__.default[route.type];
-  const structure = await resolver.default();
-  structure.type = route.type;
-
-  if (!structure) {
-    res.status = 404;
-    return next();
-  }
-
-  // If format = json return data directly
-  if (req.query && req.query.json && req.query.json === "true") {
-    return res.json(structure);
-  }
-
-  req.structure = structure;
-  next();
-});
-
-
-/***/ }),
-
-/***/ "./src/server/middlewares/data/resolvers/index.js":
-/*!********************************************************!*\
-  !*** ./src/server/middlewares/data/resolvers/index.js ***!
-  \********************************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => __WEBPACK_DEFAULT_EXPORT__
-/* harmony export */ });
-/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = ({
-  page: Promise.all(/*! import() */[__webpack_require__.e("vendors-node_modules_axios_index_js"), __webpack_require__.e("src_server_middlewares_data_resolvers_page_js")]).then(__webpack_require__.bind(__webpack_require__, /*! ./page */ "./src/server/middlewares/data/resolvers/page.js")),
-  article: Promise.all(/*! import() */[__webpack_require__.e("vendors-node_modules_axios_index_js"), __webpack_require__.e("src_server_middlewares_data_resolvers_article_js")]).then(__webpack_require__.bind(__webpack_require__, /*! ./article */ "./src/server/middlewares/data/resolvers/article.js")),
-});
-
-
-/***/ }),
-
 /***/ "./src/server/middlewares/render/html.js":
 /*!***********************************************!*\
   !*** ./src/server/middlewares/render/html.js ***!
@@ -23047,6 +22992,7 @@ __webpack_require__.r(__webpack_exports__);
   const { default: layout } = route.layout ? await route.layout : _components_Layout_Layout_svelte__WEBPACK_IMPORTED_MODULE_1__;
 
   const blocks =
+    structure &&
     structure.content &&
     structure.content.length &&
     Object.fromEntries(
@@ -23072,6 +23018,62 @@ __webpack_require__.r(__webpack_exports__);
     structure,
   });
   res.send(renderHtml);
+});
+
+
+/***/ }),
+
+/***/ "./src/server/middlewares/structure/index.js":
+/*!***************************************************!*\
+  !*** ./src/server/middlewares/structure/index.js ***!
+  \***************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => __WEBPACK_DEFAULT_EXPORT__
+/* harmony export */ });
+/* harmony import */ var _resolvers__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./resolvers */ "./src/server/middlewares/structure/resolvers/index.js");
+
+
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = ((route) => async (req, res, next) => {
+  const resolver = await _resolvers__WEBPACK_IMPORTED_MODULE_0__.default[route.type];
+  const structure = await resolver.default(req);
+
+  if (!structure) {
+    res.status = 404;
+    return next();
+  }
+
+  structure.type = route.type;
+
+  // If format = json return data directly
+  if (req.query && req.query.json && req.query.json === "true") {
+    return res.json(structure);
+  }
+
+  req.structure = structure;
+  next();
+});
+
+
+/***/ }),
+
+/***/ "./src/server/middlewares/structure/resolvers/index.js":
+/*!*************************************************************!*\
+  !*** ./src/server/middlewares/structure/resolvers/index.js ***!
+  \*************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => __WEBPACK_DEFAULT_EXPORT__
+/* harmony export */ });
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = ({
+  page: Promise.all(/*! import() */[__webpack_require__.e("vendors-node_modules_axios_index_js"), __webpack_require__.e("src_server_middlewares_structure_resolvers_page_js")]).then(__webpack_require__.bind(__webpack_require__, /*! ./page */ "./src/server/middlewares/structure/resolvers/page.js")),
+  article: Promise.all(/*! import() */[__webpack_require__.e("vendors-node_modules_axios_index_js"), __webpack_require__.e("src_server_middlewares_structure_resolvers_article_js")]).then(__webpack_require__.bind(__webpack_require__, /*! ./article */ "./src/server/middlewares/structure/resolvers/article.js")),
 });
 
 
@@ -23122,7 +23124,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var express__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! express */ "./node_modules/express/index.js");
 /* harmony import */ var express__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(express__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var _router__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @/router */ "./src/router.js");
-/* harmony import */ var _server_middlewares_data__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @/server/middlewares/data */ "./src/server/middlewares/data/index.js");
+/* harmony import */ var _server_middlewares_structure__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @/server/middlewares/structure */ "./src/server/middlewares/structure/index.js");
 /* harmony import */ var _server_middlewares_render__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @/server/middlewares/render */ "./src/server/middlewares/render/index.js");
 
 
@@ -23133,7 +23135,7 @@ const router = express__WEBPACK_IMPORTED_MODULE_0___default().Router();
 
 Object.entries(_router__WEBPACK_IMPORTED_MODULE_1__.default).map(([type, route]) => {
   const config = { ...route, type };
-  router.get(route.path, (0,_server_middlewares_data__WEBPACK_IMPORTED_MODULE_2__.default)(config), (0,_server_middlewares_render__WEBPACK_IMPORTED_MODULE_3__.default)(config));
+  router.get(route.path, (0,_server_middlewares_structure__WEBPACK_IMPORTED_MODULE_2__.default)(config), (0,_server_middlewares_render__WEBPACK_IMPORTED_MODULE_3__.default)(config));
 });
 
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (router);
