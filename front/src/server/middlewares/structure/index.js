@@ -1,17 +1,27 @@
 export default (route) => async (req, res, next) => {
-  const structure = { type: route.type };
+  const structure = { type: route.type, componentRefs: [] };
 
   const { getServerProps: getTemplateProps } =
     route.template && (await route.template());
   if (getTemplateProps && typeof getTemplateProps === "function") {
     structure.data = await getTemplateProps(req);
+    if (structure.data && structure.data.components) {
+      structure.componentRefs.push(structure.data.components);
+    }
   }
 
   const { getServerProps: getLayoutProps } =
     route.layout && (await route.layout());
   if (getLayoutProps && typeof getLayoutProps === "function") {
     structure.layout = await getLayoutProps(req);
+    if (structure.layout && structure.layout.components) {
+      structure.componentRefs.push(structure.layout.components);
+    }
   }
+
+  structure.componentRefs = structure.componentRefs
+    .filter(Boolean)
+    .filter((v, i, a) => a.indexOf(v) === i);
 
   if (!structure.data) {
     res.status = 404;

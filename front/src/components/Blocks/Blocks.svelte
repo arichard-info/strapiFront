@@ -1,13 +1,19 @@
 <script>
+  import { getContext } from "svelte";
   import RenderBlock from "@/components/Blocks/RenderBlock.svelte";
   export let blocks = [];
-  export let components = {};
+
+  const { components } = getContext("stores");
 </script>
 
-{#if blocks && blocks.length}
-  {#each blocks as block}
-    <RenderBlock component={components[block.__component]} data={block} />
-  {/each}
-{:else}
+{#if !$components}
+  <p>No component refs :/</p>
+{:else if !blocks || !blocks.length}
   <p>No blocks :/</p>
+{:else}
+  {#each blocks as block}
+    {#if $components[block.__component]}
+      <RenderBlock component={$components[block.__component]} data={block} />
+    {/if}
+  {/each}
 {/if}

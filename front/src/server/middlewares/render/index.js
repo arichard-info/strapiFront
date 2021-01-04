@@ -7,23 +7,20 @@ export default (route) => async (req, res, next) => {
   const { default: template } = route.template && (await route.template());
   const { default: layout = false } = route.layout && (await route.layout());
 
-  const blocks =
-    structure &&
-    structure.data &&
-    structure.data.content &&
-    structure.data.content.length &&
+  const components =
+    structure?.componentRefs?.length &&
     Object.fromEntries(
       await Promise.all(
-        structure.data.content.map(async (block) => {
-          const component = await blockRegistry[block.__component].render();
-          return [block.__component, component.default];
+        structure.componentRefs.map(async (c) => {
+          const component = await blockRegistry[c].render();
+          return [c, component.default];
         })
       )
     );
 
   const { html, css, head } = App.render({
     structure: req.structure,
-    blocks,
+    components,
     template,
     layout,
   });

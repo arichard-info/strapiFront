@@ -1,25 +1,31 @@
 <script>
-  import { onMount, setContext } from "svelte";
-  import { writable } from "svelte/store";
+  import { setContext } from "svelte";
+  import { readable, writable } from "svelte/store";
   import Admin from "@/components/Admin/Admin.svelte";
 
   export let structure = {};
   export let layout = null;
   export let template = null;
-  export let blocks = [];
+  export let components = {};
 
-  const _blocks = writable(blocks);
-  setContext("blocks", _blocks);
+  const _data = readable(structure.data || {});
+  const _layout = readable(structure.layout || {});
+
+  setContext("stores", {
+    components: writable(components || []),
+    data: _data,
+    layout: _layout,
+  });
 </script>
 
 <svelte:component this={Admin}>
   {#if layout}
-    <svelte:component this={layout} data={structure.layout} >
+    <svelte:component this={layout} {...$_layout}>
       {#if template}
-        <svelte:component this={template} data={structure.data} />
+        <svelte:component this={template} {...$_data} />
       {/if}
     </svelte:component>
   {:else if template}
-    <svelte:component this={template} data={structure.data} />
+    <svelte:component this={template} {...$_data} />
   {/if}
 </svelte:component>

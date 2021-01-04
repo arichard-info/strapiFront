@@ -20178,26 +20178,39 @@ __webpack_require__.r(__webpack_exports__);
 
 
 const App = (0,svelte_internal__WEBPACK_IMPORTED_MODULE_0__.create_ssr_component)(($$result, $$props, $$bindings, slots) => {
+	let $_layout;
+	let $_data;
 	let { structure = {} } = $$props;
 	let { layout = null } = $$props;
 	let { template = null } = $$props;
-	let { blocks = [] } = $$props;
-	const _blocks = (0,svelte_store__WEBPACK_IMPORTED_MODULE_2__.writable)(blocks);
-	(0,svelte__WEBPACK_IMPORTED_MODULE_1__.setContext)("blocks", _blocks);
+	let { components = {} } = $$props;
+	const _data = (0,svelte_store__WEBPACK_IMPORTED_MODULE_2__.readable)(structure.data || {});
+	$_data = (0,svelte_internal__WEBPACK_IMPORTED_MODULE_0__.get_store_value)(_data);
+	const _layout = (0,svelte_store__WEBPACK_IMPORTED_MODULE_2__.readable)(structure.layout || {});
+	$_layout = (0,svelte_internal__WEBPACK_IMPORTED_MODULE_0__.get_store_value)(_layout);
+
+	(0,svelte__WEBPACK_IMPORTED_MODULE_1__.setContext)("stores", {
+		components: (0,svelte_store__WEBPACK_IMPORTED_MODULE_2__.writable)(components || []),
+		data: _data,
+		layout: _layout
+	});
+
 	if ($$props.structure === void 0 && $$bindings.structure && structure !== void 0) $$bindings.structure(structure);
 	if ($$props.layout === void 0 && $$bindings.layout && layout !== void 0) $$bindings.layout(layout);
 	if ($$props.template === void 0 && $$bindings.template && template !== void 0) $$bindings.template(template);
-	if ($$props.blocks === void 0 && $$bindings.blocks && blocks !== void 0) $$bindings.blocks(blocks);
+	if ($$props.components === void 0 && $$bindings.components && components !== void 0) $$bindings.components(components);
+	$_layout = (0,svelte_internal__WEBPACK_IMPORTED_MODULE_0__.get_store_value)(_layout);
+	$_data = (0,svelte_internal__WEBPACK_IMPORTED_MODULE_0__.get_store_value)(_data);
 
 	return `${(0,svelte_internal__WEBPACK_IMPORTED_MODULE_0__.validate_component)(_components_Admin_Admin_svelte__WEBPACK_IMPORTED_MODULE_3__.default || svelte_internal__WEBPACK_IMPORTED_MODULE_0__.missing_component, "svelte:component").$$render($$result, {}, {}, {
 		default: () => `${layout
-		? `${(0,svelte_internal__WEBPACK_IMPORTED_MODULE_0__.validate_component)(layout || svelte_internal__WEBPACK_IMPORTED_MODULE_0__.missing_component, "svelte:component").$$render($$result, { data: structure.layout }, {}, {
+		? `${(0,svelte_internal__WEBPACK_IMPORTED_MODULE_0__.validate_component)(layout || svelte_internal__WEBPACK_IMPORTED_MODULE_0__.missing_component, "svelte:component").$$render($$result, Object.assign($_layout), {}, {
 				default: () => `${template
-				? `${(0,svelte_internal__WEBPACK_IMPORTED_MODULE_0__.validate_component)(template || svelte_internal__WEBPACK_IMPORTED_MODULE_0__.missing_component, "svelte:component").$$render($$result, { data: structure.data }, {}, {})}`
+				? `${(0,svelte_internal__WEBPACK_IMPORTED_MODULE_0__.validate_component)(template || svelte_internal__WEBPACK_IMPORTED_MODULE_0__.missing_component, "svelte:component").$$render($$result, Object.assign($_data), {}, {})}`
 				: ``}`
 			})}`
 		: `${template
-			? `${(0,svelte_internal__WEBPACK_IMPORTED_MODULE_0__.validate_component)(template || svelte_internal__WEBPACK_IMPORTED_MODULE_0__.missing_component, "svelte:component").$$render($$result, { data: structure.data }, {}, {})}`
+			? `${(0,svelte_internal__WEBPACK_IMPORTED_MODULE_0__.validate_component)(template || svelte_internal__WEBPACK_IMPORTED_MODULE_0__.missing_component, "svelte:component").$$render($$result, Object.assign($_data), {}, {})}`
 			: ``}`}`
 	})}`;
 });
@@ -22970,23 +22983,20 @@ __webpack_require__.r(__webpack_exports__);
   const { default: template } = route.template && (await route.template());
   const { default: layout = false } = route.layout && (await route.layout());
 
-  const blocks =
-    structure &&
-    structure.data &&
-    structure.data.content &&
-    structure.data.content.length &&
+  const components =
+    structure?.componentRefs?.length &&
     Object.fromEntries(
       await Promise.all(
-        structure.data.content.map(async (block) => {
-          const component = await _components_Blocks_Blocks_registry__WEBPACK_IMPORTED_MODULE_1__.default[block.__component].render();
-          return [block.__component, component.default];
+        structure.componentRefs.map(async (c) => {
+          const component = await _components_Blocks_Blocks_registry__WEBPACK_IMPORTED_MODULE_1__.default[c].render();
+          return [c, component.default];
         })
       )
     );
 
   const { html, css, head } = _components_App_svelte__WEBPACK_IMPORTED_MODULE_0__.default.render({
     structure: req.structure,
-    blocks,
+    components,
     template,
     layout,
   });
@@ -23015,19 +23025,29 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => __WEBPACK_DEFAULT_EXPORT__
 /* harmony export */ });
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = ((route) => async (req, res, next) => {
-  const structure = { type: route.type };
+  const structure = { type: route.type, componentRefs: [] };
 
   const { getServerProps: getTemplateProps } =
     route.template && (await route.template());
   if (getTemplateProps && typeof getTemplateProps === "function") {
     structure.data = await getTemplateProps(req);
+    if (structure.data && structure.data.components) {
+      structure.componentRefs.push(structure.data.components);
+    }
   }
 
   const { getServerProps: getLayoutProps } =
     route.layout && (await route.layout());
   if (getLayoutProps && typeof getLayoutProps === "function") {
     structure.layout = await getLayoutProps(req);
+    if (structure.layout && structure.layout.components) {
+      structure.componentRefs.push(structure.layout.components);
+    }
   }
+
+  structure.componentRefs = structure.componentRefs
+    .filter(Boolean)
+    .filter((v, i, a) => a.indexOf(v) === i);
 
   if (!structure.data) {
     res.status = 404;

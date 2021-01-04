@@ -12,16 +12,14 @@ const init = async () => {
   const { default: layout } = routeConfig.layout
     ? await routeConfig.layout()
     : await import("@/components/Layout/Layout.svelte");
-  const blocks =
-    structure &&
-    structure.data &&
-    structure.data.content &&
-    structure.data.content.length &&
+
+  const components =
+    structure.componentRefs &&
     Object.fromEntries(
       await Promise.all(
-        structure.data.content.map(async (block) => {
-          const component = await blockRegistry[block.__component].render();
-          return [block.__component, component.default];
+        structure.componentRefs.map(async (c) => {
+          const component = await blockRegistry[c].render();
+          return [c, component.default];
         })
       )
     );
@@ -33,7 +31,7 @@ const init = async () => {
       structure,
       template,
       layout,
-      blocks,
+      components,
     },
   });
 
