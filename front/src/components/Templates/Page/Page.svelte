@@ -1,16 +1,26 @@
-<script>
-  import { getContext } from "svelte";
-  import Blocks from "@/components/Blocks/Blocks.svelte";
-  const blocks = getContext("blocks");
-
-  export let structure = {};
+<script context="module">
+  import axios from "axios";
+  export const getServerProps = async (req) => {
+    const data = await axios
+      .get(`http://localhost:1337/pages?fullslug=${req.baseUrl}`)
+      .then((res) => res.data)
+      .then((data) => data[0])
+      .catch(console.error);
+    if (data && data.content && data.content.length)
+      data.components = data.content.map((c) => c.__component);
+    return data;
+  };
 </script>
 
-{#if structure}
-  <div class="container">
-    <h1>{structure.title}</h1>
-    {#if structure.content && structure.content.length}
-      <Blocks blocks={structure.content} components={$blocks} />
-    {/if}
-  </div>
-{/if}
+<script>
+  import Blocks from "@/components/Blocks/Blocks.svelte";
+  export let title = "";
+  export let content = "";
+</script>
+
+<div class="container">
+  <h1>{title}</h1>
+  {#if content && content.length}
+    <Blocks blocks={content} />
+  {/if}
+</div>

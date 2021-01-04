@@ -1,31 +1,30 @@
 import App from "@/components/App.svelte";
-import * as Layout from "@/components/Layout/Layout.svelte";
 import blockRegistry from "@/components/Blocks/Blocks.registry";
 import HTMLTemplate from "./html";
 
 export default (route) => async (req, res, next) => {
   const structure = req.structure;
-  const { default: template } = await route.template();
-  const { default: layout } = route.layout ? await route.layout : Layout;
+  const { default: templateComponent } =
+    route.template && (await route.template());
+  const { default: layoutComponent = false } =
+    route.layout && (await route.layout());
 
-  const blocks =
-    structure &&
-    structure.content &&
-    structure.content.length &&
+  const components =
+    structure?.componentRefs?.length &&
     Object.fromEntries(
       await Promise.all(
-        structure.content.map(async (block) => {
-          const component = await blockRegistry[block.__component].render();
-          return [block.__component, component.default];
+        structure.componentRefs.map(async (c) => {
+          const component = await blockRegistry[c].render();
+          return [c, component.default];
         })
       )
     );
 
   const { html, css, head } = App.render({
     structure: req.structure,
-    blocks,
-    template,
-    layout,
+    components,
+    templateComponent,
+    layoutComponent,
   });
 
   const renderHtml = HTMLTemplate({
