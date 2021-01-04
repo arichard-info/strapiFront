@@ -1,12 +1,17 @@
 export default (route) => async (req, res, next) => {
-  const structure = { type: route.type, componentRefs: [] };
+  const structure = {
+    type: route.type,
+    componentRefs: [],
+    layout: {},
+    data: {},
+  };
 
   const { getServerProps: getTemplateProps } =
     route.template && (await route.template());
   if (getTemplateProps && typeof getTemplateProps === "function") {
     structure.data = await getTemplateProps(req);
     if (structure.data && structure.data.components) {
-      structure.componentRefs.push(structure.data.components);
+      structure.componentRefs.push(...structure.data.components);
     }
   }
 
@@ -15,7 +20,7 @@ export default (route) => async (req, res, next) => {
   if (getLayoutProps && typeof getLayoutProps === "function") {
     structure.layout = await getLayoutProps(req);
     if (structure.layout && structure.layout.components) {
-      structure.componentRefs.push(structure.layout.components);
+      structure.componentRefs.push(...structure.layout.components);
     }
   }
 
