@@ -4,8 +4,10 @@ import HTMLTemplate from "./html";
 
 export default (route) => async (req, res, next) => {
   const structure = req.structure;
-  const { default: template } = route.template && (await route.template());
-  const { default: layout = false } = route.layout && (await route.layout());
+  const { default: templateComponent } =
+    route.template && (await route.template());
+  const { default: layoutComponent = false } =
+    route.layout && (await route.layout());
 
   const components =
     structure?.componentRefs?.length &&
@@ -21,8 +23,8 @@ export default (route) => async (req, res, next) => {
   const { html, css, head } = App.render({
     structure: req.structure,
     components,
-    template,
-    layout,
+    templateComponent,
+    layoutComponent,
   });
 
   const renderHtml = HTMLTemplate({

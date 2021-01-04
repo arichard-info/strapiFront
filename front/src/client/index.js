@@ -10,8 +10,8 @@ const init = async () => {
   const routeConfig = routes[structure.type];
 
   const [
-    { default: template },
-    { default: layout },
+    { default: templateComponent },
+    { default: layoutComponent },
     components,
   ] = await Promise.all([
     // 1. Template component
@@ -39,8 +39,8 @@ const init = async () => {
     hydrate: true,
     props: {
       structure,
-      template,
-      layout,
+      templateComponent,
+      layoutComponent,
       components,
     },
   });

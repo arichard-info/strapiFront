@@ -4,28 +4,29 @@
   import Admin from "@/components/Admin/Admin.svelte";
 
   export let structure = {};
-  export let layout = null;
-  export let template = null;
+  export let layoutComponent = null;
+  export let templateComponent = null;
   export let components = {};
 
+  const _components = writable(components || {});
   const _data = readable(structure.data || {});
   const _layout = readable(structure.layout || {});
 
   setContext("stores", {
-    components: writable(components || []),
+    components: _components,
     data: _data,
     layout: _layout,
   });
 </script>
 
 <svelte:component this={Admin}>
-  {#if layout}
-    <svelte:component this={layout} {...$_layout}>
-      {#if template}
-        <svelte:component this={template} {...$_data} />
+  {#if layoutComponent}
+    <svelte:component this={layoutComponent} {...$_layout}>
+      {#if templateComponent}
+        <svelte:component this={templateComponent} {...$_data} />
       {/if}
     </svelte:component>
-  {:else if template}
-    <svelte:component this={template} {...$_data} />
+  {:else if templateComponent}
+    <svelte:component this={templateComponent} {...$_data} />
   {/if}
 </svelte:component>
