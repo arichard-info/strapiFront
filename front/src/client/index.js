@@ -8,21 +8,31 @@ const init = async () => {
   const structure = JSON.parse((dataEl && dataEl.innerText) || "{}");
 
   const routeConfig = routes[structure.type];
-  const { default: template } = await routeConfig.template();
-  const { default: layout } = routeConfig.layout
-    ? await routeConfig.layout()
-    : await import("@/components/Layout/Layout.svelte");
 
-  const components =
+  const [
+    { default: template },
+    { default: layout },
+    components,
+  ] = await Promise.all([
+    // 1. Template component
+    routeConfig.template(),
+
+    // 2. Layout component
+    routeConfig.layout
+      ? routeConfig.layout()
+      : import("@/components/Layout/Layout.svelte"),
+
+    // 3. Dynamic components
     structure.componentRefs &&
-    Object.fromEntries(
-      await Promise.all(
-        structure.componentRefs.map(async (c) => {
-          const component = await blockRegistry[c].render();
-          return [c, component.default];
-        })
-      )
-    );
+      Object.fromEntries(
+        await Promise.all(
+          structure.componentRefs.map(async (c) => {
+            const component = await blockRegistry[c].render();
+            return [c, component.default];
+          })
+        )
+      ),
+  ]);
 
   const app = new App({
     target,
