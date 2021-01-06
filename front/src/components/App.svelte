@@ -1,32 +1,25 @@
 <script>
   import { setContext } from "svelte";
-  import { readable, writable } from "svelte/store";
+  import { generateStores } from "./App.stores";
   import Admin from "@/components/Admin/Admin.svelte";
 
-  export let structure = {};
-  export let layoutComponent = null;
-  export let templateComponent = null;
-  export let components = {};
+  export let data = {};
+  export let components = { layout: null, template: null, blocks: null };
 
-  const _components = writable(components || {});
-  const _data = readable(structure.data || {});
-  const _layout = readable(structure.layout || {});
+  const stores = generateStores({ components, data });
+  setContext("stores", stores);
 
-  setContext("stores", {
-    components: _components,
-    data: _data,
-    layout: _layout,
-  });
+  const { components: _components, data: _data } = stores;
 </script>
 
 <svelte:component this={Admin}>
-  {#if layoutComponent}
-    <svelte:component this={layoutComponent} {...$_layout}>
-      {#if templateComponent}
-        <svelte:component this={templateComponent} {...$_data} />
+  {#if $_components.layout}
+    <svelte:component this={$_components.layout} {...$_data.layout}>
+      {#if $_components.template}
+        <svelte:component this={$_components.template} {...$_data.template} />
       {/if}
     </svelte:component>
-  {:else if templateComponent}
-    <svelte:component this={templateComponent} {...$_data} />
+  {:else if $_components.template}
+    <svelte:component this={$_components.template} {...$_data.template} />
   {/if}
 </svelte:component>

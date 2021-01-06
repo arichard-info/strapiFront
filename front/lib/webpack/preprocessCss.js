@@ -18,6 +18,9 @@ module.exports = (mode) => ({ content, attributes, filename }) => {
       : filename.lastIndexOf("\\") // remove after last '\' (windows)
   );
 
+  content = `@import "./src/style/variables"; 
+  ${content}`;
+
   // PreProcess : SASS
   if (attributes.type === "scss" || attributes.type === "text/scss") {
     const output = sass.renderSync({ data: content, includePaths: [context] });
@@ -37,5 +40,6 @@ function autoprefixStyle(content, filename) {
     .then((output) => ({
       code: output.css,
       map: output.map,
+      dependencies: [filename.replace(".svelte", ".scss")],
     }));
 }

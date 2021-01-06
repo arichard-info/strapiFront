@@ -1,4 +1,4 @@
-export default ({ html = "", css = "", head = "", structure = "" }) =>
+export default ({ html = "", css = "", head = "", data = "" }) =>
   `<!DOCTYPE html>
     <html lang="fr">
         <head>
@@ -14,7 +14,7 @@ export default ({ html = "", css = "", head = "", structure = "" }) =>
                 ${html}
             </div>
             <script id="_data" type="application/json">
-                ${JSON.stringify(structure)}
+                ${JSON.stringify(data)}
             </script>
             <script src="/client/client.js"></script>
         </body>
