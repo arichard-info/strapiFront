@@ -6,6 +6,6 @@ const router = express.Router();
 
 router.use("/client/", sirv("dist/client", { dev: true }));
 router.use("/assets/", sirv("dist/assets", { dev: true }));
-router.use("/*", routerPage);
+router.use(routerPage);
 
 export default router;

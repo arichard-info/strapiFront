@@ -1,5 +1,6 @@
 <script>
     import Link from "@/components/Global/Link/Link";
+    export let menu = {};
 </script>
 
 <style type="text/scss">
@@ -10,21 +11,13 @@
     <nav class="container">
         <span><Link href="/">Camon</Link></span>
         <ul>
-            <li>
-                <Link href="/services">Services</Link>
-            </li>
-            <li>
-                <Link href="/events">Events</Link>
-            </li>
-            <li>
-                <Link href="/municipality">Municipality</Link>
-            </li>
-            <li>
-                <Link href="/questions-answers">Q&A</Link>
-            </li>
-            <li>
-                <Link href="/blog">Blog</Link>
-            </li>
+            {#if menu && menu.items && menu.items.length}
+                {#each menu.items as item}
+                    <li>
+                        <Link href={item.url}>{item.label}</Link>
+                    </li>
+                {/each}
+            {/if}
         </ul>
     </nav>
 </header>

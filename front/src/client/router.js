@@ -1,7 +1,28 @@
 import routes from "@/router";
 import blockRegistry from "@/components/Blocks/Blocks.registry";
+import pathToRegexp from "path-to-regexp";
 
-export const loadComponents = async ({ type, refs }) => {
+export const getConfigFromRoute = (route) => {
+  if (!route) return;
+  const type = Object.keys(routes).find((key) => {
+    const regex = pathToRegexp(routes[key].path);
+    return regex.test(route);
+  });
+  return routes[type];
+};
+
+export const loadLayoutFromRoute = async (route) => {
+  const config = getConfigFromRoute(route);
+  if (config && config.layout && typeof config.layout === "function") {
+    const module = await config.layout();
+    return module && module.default;
+  }
+};
+
+export const loadComponentsFromData = async ({
+  type = "",
+  componentRefs = [],
+}) => {
   const routeConfig = routes[type];
   const [
     { default: template },
@@ -17,10 +38,10 @@ export const loadComponents = async ({ type, refs }) => {
       : import("@/components/Layout/Layout.svelte"),
 
     // 3. Dynamic components
-    refs &&
+    componentRefs &&
       Object.fromEntries(
         await Promise.all(
-          refs.map(async (c) => {
+          componentRefs.map(async (c) => {
             const component = await blockRegistry[c].render();
             return [c, component.default];
           })

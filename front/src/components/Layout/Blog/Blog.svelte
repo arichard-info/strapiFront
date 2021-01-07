@@ -11,9 +11,12 @@
 </script>
 
 <script>
-    import Header from "./Header/Header";
+    import Header from "./../Header/Header";
     export let menu = "";
 </script>
 
 <Header {menu} />
-<slot />
+<div class="container">
+    <h1>Blog</h1>
+    <slot />
+</div>

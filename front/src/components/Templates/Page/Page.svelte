@@ -1,8 +1,9 @@
 <script context="module">
   import axios from "axios";
   export const getServerProps = async (req) => {
+    const path = req.path === "/" ? "" : req.path;
     const data = await axios
-      .get(`http://localhost:1337/pages?fullslug=${req.baseUrl}`)
+      .get(`http://localhost:1337/pages?fullslug=${path}`)
       .then((res) => res.data)
       .then((data) => data[0])
       .catch(console.error);

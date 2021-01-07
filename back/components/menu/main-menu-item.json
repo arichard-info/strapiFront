@@ -1,0 +1,17 @@
+{
+  "collectionName": "components_misc_main_menu_items",
+  "info": {
+    "name": "item",
+    "icon": "angle-right",
+    "description": ""
+  },
+  "options": {},
+  "attributes": {
+    "label": {
+      "type": "string"
+    },
+    "url": {
+      "type": "string"
+    }
+  }
+}

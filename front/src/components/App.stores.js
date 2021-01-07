@@ -1,6 +1,6 @@
-import { writable } from "svelte/store";
+import { writable, get } from "svelte/store";
 import axios from "axios";
-import { loadComponents } from "@/client/router";
+import { loadComponentsFromData, loadLayoutFromRoute } from "@/client/router";
 
 export const generateStores = ({ components: _components, data: _data }) => {
   const data = dataStore(_data);
@@ -39,38 +39,54 @@ const routerStore = ({ components: storeComponents, data: storeData }) => {
 
   const renderNewRoute = async (url) => {
     router.update((_router) => ({ ..._router, loading: true }));
-    const data = await axios.get(`${url}?json=true`).then((res) => res.data);
+
+    // 1. Get new layout component and compare it to previous one
+    const newLayout = await loadLayoutFromRoute(url);
+    const { layout: prevLayout } = get(storeComponents);
+    const sameLayout = newLayout === prevLayout;
+
+    let jsonUrl = `${url}?json=true`;
+
+    // Don't fetch layout data if it doesn't change
+    if (sameLayout) jsonUrl += `&refreshLayout=false`;
+
+    // 2. Get data for new route
+    const data = await axios.get(jsonUrl).then((res) => res.data);
     if (!data) {
       window.location = href;
       return;
     }
 
-    const components = await loadComponents({
-      type: data.type,
-      refs: data.componentRefs,
-    });
+    // 3. Get components from data
+    const components = await loadComponentsFromData(data);
 
+    // 4. Update components stores (updating render)
     storeComponents.set({
+      layout: newLayout,
       template: components.template,
-      layout: components.layout,
       blocks: components.blocks,
     });
 
-    storeData.set({ layout: data.layout, template: data.template, ...data });
+    // 5. Update data stores (updating render)
+    storeData.update((prevData) => {
+      return {
+        ...data,
+        // If same layout => Don't update layout data
+        layout: sameLayout ? prevData.layout : data.layout,
+        template: data.template,
+      };
+    });
+
     router.update((_router) => ({ ..._router, loading: false }));
   };
 
   router.navigate = async (href, scroll) => {
-    const data = await axios.get(`${href}?json=true`).then((res) => res.data);
-    if (!data) {
-      window.location = href;
-      return;
-    }
     window.history.pushState({}, "", href);
     await renderNewRoute(href);
   };
 
   router.init = () => {
+    // Browser history navigation (ex : back / forward)
     window.addEventListener("popstate", async (e) => {
       const url = window.location;
       await renderNewRoute(url);
