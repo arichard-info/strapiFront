@@ -6,8 +6,7 @@ export default (route) => async (req, res, next) => {
     template: {},
   };
 
-  const { getServerProps: getTemplateProps } =
-    (route.template && (await route.template())) || {};
+  const { getServerProps: getTemplateProps } = route.template || {};
   if (getTemplateProps && typeof getTemplateProps === "function") {
     data.template = (await getTemplateProps(req)) || {};
     if (data.template && data.template.components) {
@@ -21,8 +20,7 @@ export default (route) => async (req, res, next) => {
     !req.query.refreshLayout ||
     req.query.refreshLayout !== "false"
   ) {
-    const { getServerProps: getLayoutProps } =
-      (route.layout && (await route.layout())) || {};
+    const { getServerProps: getLayoutProps } = route.layout || {};
     if (getLayoutProps && typeof getLayoutProps === "function") {
       data.layout = await getLayoutProps(req);
       if (data.layout && data.layout.components) {
