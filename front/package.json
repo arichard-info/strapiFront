@@ -21,6 +21,7 @@
     "postcss": "^8.2.1",
     "sass": "^1.30.0",
     "sass-loader": "^10.1.0",
+    "showdown": "^1.9.1",
     "sirv": "^0.2.0",
     "svelte": "^3.31.0",
     "svelte-loader": "^2.13.6",
